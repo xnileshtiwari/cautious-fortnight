@@ -6,16 +6,32 @@ import os
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.callbacks.manager import CallbackManager
 import json
+import streamlit as st
 
+# Load environment variables - try both methods to support local and cloud deployment
 dotenv.load_dotenv()
 
+# Try to get credentials from Streamlit Secrets (for cloud deployment)
+# Fall back to environment variables (for local development)
+try:
+    # Try to access Streamlit secrets
+    GOOGLE_API_KEY = st.secrets["GEMINI_API_KEY"] 
+    NEO4J_URI = st.secrets["NEO4J_URI"]
+    NEO4J_USERNAME = st.secrets["NEO4J_USERNAME"] 
+    NEO4J_PASSWORD = st.secrets["NEO4J_PASSWORD"]
+    NEO4J_DATABASE = st.secrets["NEO4J_DATABASE"]
+    print("Using Streamlit secrets for configuration")
+except (KeyError, AttributeError):
+    # Fall back to environment variables
+    GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
+    NEO4J_URI = os.getenv("NEO4J_URI")
+    NEO4J_USERNAME = os.getenv("NEO4J_USERNAME", "neo4j")
+    NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
+    NEO4J_DATABASE = os.getenv("NEO4J_DATABASE", "neo4")
+    print("Using environment variables for configuration")
 
-GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
-NEO4J_URI = os.getenv("NEO4J_URI")
-NEO4J_USERNAME = "neo4j"
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
-NEO4J_DATABASE = 'neo4j'
-
+# Print connection info for debugging (remove in production)
+print(f"Connecting to database: {NEO4J_URI} with database: {NEO4J_DATABASE}")
 
 class VerboseHandler(BaseCallbackHandler):
     def __init__(self):
@@ -82,37 +98,46 @@ class VerboseHandler(BaseCallbackHandler):
 
 
 def generate(user_input):
-    graph = Neo4jGraph(url=NEO4J_URI, username=NEO4J_USERNAME, password=NEO4J_PASSWORD, database=NEO4J_DATABASE)
+    try:
+        graph = Neo4jGraph(url=NEO4J_URI, username=NEO4J_USERNAME, password=NEO4J_PASSWORD, database=NEO4J_DATABASE)
 
-    # Create our callback handler
-    handler = VerboseHandler()
-    callback_manager = CallbackManager([handler])
+        # Create our callback handler
+        handler = VerboseHandler()
+        callback_manager = CallbackManager([handler])
 
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash",
-        temperature=0,
-        max_tokens=None,
-        timeout=None,
-        api_key=GOOGLE_API_KEY,
-        callbacks=[handler]
-    )
-    
-    chain = GraphCypherQAChain.from_llm(
-        graph=graph, 
-        llm=llm, 
-        allow_dangerous_requests=True, 
-        verbose=True,
-        callbacks=[handler]
-    )
-    
-    response = chain(user_input)
-    result = response.get('result') or response.get('answer') or response
-    
-    # Return both the result and the logs
-    return {
-        "result": result,
-        "logs": handler.logs
-    }
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-2.0-flash",
+            temperature=0,
+            max_tokens=None,
+            timeout=None,
+            api_key=GOOGLE_API_KEY,
+            callbacks=[handler]
+        )
+        
+        chain = GraphCypherQAChain.from_llm(
+            graph=graph, 
+            llm=llm, 
+            allow_dangerous_requests=True, 
+            verbose=True,
+            callbacks=[handler]
+        )
+        
+        response = chain(user_input)
+        result = response.get('result') or response.get('answer') or response
+        
+        # Return both the result and the logs
+        return {
+            "result": result,
+            "logs": handler.logs
+        }
+    except Exception as e:
+        # Log the error and return a user-friendly message
+        error_message = f"Error connecting to database: {str(e)}"
+        print(error_message)  # Print to Streamlit logs
+        return {
+            "result": "I'm having trouble connecting to the database. This may be due to network restrictions in Streamlit Community Cloud. Please check the application logs for more details.",
+            "logs": [{"type": "error", "message": error_message}]
+        }
 
 # Helper function to get the verbose logs for st.status
 def get_verbose_logs():
