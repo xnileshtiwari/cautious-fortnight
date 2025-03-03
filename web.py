@@ -19,7 +19,6 @@ hide_streamlit_style = """
     .stDeployButton {display: none;}
     [data-testid="stToolbar"] {visibility: hidden !important;}
     [data-testid="stDecoration"] {visibility: hidden !important;}
-    [data-testid="stStatusWidget"] {visibility: hidden !important;}
     .viewerBadge_link__1S137 {display: none !important;}
     .viewerBadge_container__1QSob {display: none !important;}
     .stAttribution {display: none !important;}
@@ -143,27 +142,55 @@ try:
         assistant_message_placeholder = st.empty()  # Use st.empty() as a placeholder
         full_response = ""
 
-        with st.spinner("Thinking..."):
-            buffer = ""
             # Add status element to display verbose output
-            with st.status("Processing with LangChain...", expanded=True) as status:
-                status.update(label="Running LangChain pipeline", state="running")
+        with st.status("Processing with LangChain...", expanded=True) as status:
+            status.update(label="Running LangChain pipeline with real-time logs", state="running")
+            
+            # Get response from main.py
+            response_data = generate(user_input)
+            
+            # Extract the result and logs
+            result = response_data["result"]
+            verbose_logs = response_data["logs"]
+            
+            # Display the verbose logs in the status component
+            for log in verbose_logs:
+                log_type = log["type"]
+                message = log["message"]
                 
-                for chunk in generate(user_input):
-                    if any(table_marker in chunk for table_marker in ['|', '+---']):
-                        buffer += chunk
-                        if '\n\n' in buffer or buffer.count('\n') > 2:  # Check for table completion
-                            full_response += buffer
-                            assistant_message_placeholder.markdown(full_response) # Update placeholder
-                            buffer = ""
-                    else:
-                        if buffer:
-                            full_response += buffer
-                            buffer = ""
-                        full_response += chunk
-                        assistant_message_placeholder.markdown(full_response) # Update placeholder
-                
-                status.update(label="Completed processing", state="complete")
+                # Format the log message based on its type for better readability
+                if log_type == "llm_start":
+                    status.write(f"🧠 **LLM Started**: {message}")
+                elif log_type == "llm_end":
+                    status.write(f"🧠 **LLM Completed**: {message}")
+                elif log_type == "llm_token":
+                    # Don't display individual tokens to avoid clutter
+                    pass
+                elif log_type == "chain_start":
+                    status.write(f"⛓️ **Chain Started**: {message}")
+                    # Add a divider for better visual separation
+                    status.write("---")
+                elif log_type == "chain_end":
+                    # Add a divider for better visual separation
+                    status.write("---")
+                    status.write(f"⛓️ **Chain Completed**: {message}")
+                elif log_type == "tool_start":
+                    status.write(f"🔧 **Database Query**: {message}")
+                elif log_type == "tool_end":
+                    status.write(f"🔧 **Query Results**: {message}")
+                    # Add a divider after database operations
+                    status.write("---")
+                else:
+                    status.write(f"ℹ️ {message}")
+            
+            # Set the full response
+            full_response = result
+            
+            # Update the assistant message placeholder
+            assistant_message_placeholder.markdown(full_response)
+            
+            # Complete the status
+            status.update(label="✅ Processing complete! See response below", state="complete")
 
         assistant_message_placeholder.empty() # Clear the placeholder
         with st.chat_message("assistant"):  # Now create the final chat message
