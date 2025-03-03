@@ -153,13 +153,19 @@ try:
             result = response_data["result"]
             verbose_logs = response_data["logs"]
             
+            # Check for error in logs
+            is_error = any(log.get("type") == "error" for log in verbose_logs)
+            
             # Display the verbose logs in the status component
             for log in verbose_logs:
                 log_type = log["type"]
                 message = log["message"]
                 
                 # Format the log message based on its type for better readability
-                if log_type == "llm_start":
+                if log_type == "error":
+                    status.update(label=f"❌ Error: {message}", state="error")
+                    st.error(f"Connection Error: {message}")
+                elif log_type == "llm_start":
                     status.write(f"🧠 **LLM Started**: {message}")
                 elif log_type == "llm_end":
                     status.write(f"🧠 **LLM Completed**: {message}")
@@ -190,7 +196,8 @@ try:
             assistant_message_placeholder.markdown(full_response)
             
             # Complete the status
-            status.update(label="✅ Processing complete! See response below", state="complete")
+            if not is_error:
+                status.update(label="✅ Processing complete! See response below", state="complete")
 
         assistant_message_placeholder.empty() # Clear the placeholder
         with st.chat_message("assistant"):  # Now create the final chat message
@@ -201,7 +208,8 @@ try:
         st.rerun()  # Refresh UI after response
 
 except Exception as e:
-    st.error(f"Response was blocked due to safety concerns. Please try different question.")
+    st.error(f"An error occurred: {str(e)}")
+    st.info("This error might be related to Neo4j connection issues. If you're running on Streamlit Community Cloud, you may need to configure Streamlit Secrets with your database credentials.")
 
 # Rerun the app to update the chat immediately
 if user_input:
