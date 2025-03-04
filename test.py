@@ -130,40 +130,40 @@ if 'temp_input' in st.session_state and st.session_state.temp_input:
     user_input = st.session_state.temp_input
     st.session_state.temp_input = None  # Clear the temporary input
 
-# main.py
+if user_input:
+    st.session_state.messages.append({"role": "user", "content": user_input})
 
+    with st.chat_message("user"):
+        st.markdown(user_input)
 
-    if user_input:
-        st.session_state.messages.append({"role": "user", "content": user_input})
+    assistant_message_placeholder = st.empty()  # Use st.empty() as a placeholder
+    full_response = ""
 
-        with st.chat_message("user"):
-            st.markdown(user_input)
+    # Add status element to display verbose output
+    with st.status("Processing with LangChain...", expanded=True) as status:
+        status.update(label="Running LangChain pipeline with real-time logs", state="running")
+        
+        # Get response from main.py
+        response_data = generate(user_input)
+        
+        # Extract the result and logs
+   
+        # Set the full response
+        full_response = response_data
+        
+        # Update the assistant message placeholder
+        assistant_message_placeholder.markdown(full_response)
+        
+        # Complete the status
+        status.update(label="✅ Processing complete! See response below", state="complete")
 
-        assistant_message_placeholder = st.empty()  # Use st.empty() as a placeholder
-        full_response = ""
+    assistant_message_placeholder.empty() # Clear the placeholder
+    with st.chat_message("assistant"):  # Now create the final chat message
+        st.markdown(full_response)
 
-            # Add status element to display verbose output
-        with st.status("Processing with LangChain...", expanded=True) as status:
-            status.update(label="Running LangChain pipeline with real-time logs", state="running")
-            
-            # Get response from main.py
-            response_data = generate(user_input)
-            
-            full_response = response_data
-            
-            # Update the assistant message placeholder
-            assistant_message_placeholder.markdown(full_response)
-            
-            # Complete the status
-            status.update(label="✅ Processing complete! See response below", state="complete")
+    st.session_state.messages.append({"role": "assistant", "content": full_response})
 
-        assistant_message_placeholder.empty() # Clear the placeholder
-        with st.chat_message("assistant"):  # Now create the final chat message
-            st.markdown(full_response)
-
-        st.session_state.messages.append({"role": "assistant", "content": full_response})
-
-        st.rerun()  # Refresh UI after response
+    st.rerun()  # Refresh UI after response
 
 
 # Rerun the app to update the chat immediately
