@@ -8,10 +8,6 @@ from langchain.callbacks.manager import CallbackManager
 import json
 import streamlit as st
 
-graph = Neo4jGraph(
-    max_connection_pool_size=50,
-    connection_acquisition_timeout=30  # seconds
-)
 
 graph = Neo4jGraph(
     encrypted=True,
