@@ -9,8 +9,8 @@ import json
 import streamlit as st
 
 
+
 graph = Neo4jGraph(
-    encrypted=True,
     trust="TRUST_ALL_CERTIFICATES"  # For cloud deployments
 )
 
