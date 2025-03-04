@@ -8,6 +8,16 @@ from langchain.callbacks.manager import CallbackManager
 import json
 import streamlit as st
 
+graph = Neo4jGraph(
+    max_connection_pool_size=50,
+    connection_acquisition_timeout=30  # seconds
+)
+
+graph = Neo4jGraph(
+    encrypted=True,
+    trust="TRUST_ALL_CERTIFICATES"  # For cloud deployments
+)
+
 # Load environment variables - try both methods to support local and cloud deployment
 dotenv.load_dotenv()
 
@@ -121,10 +131,14 @@ def generate(user_input):
             verbose=True,
             callbacks=[handler]
         )
+
         
         response = chain(user_input)
         result = response.get('result') or response.get('answer') or response
-        
+
+    finally:
+        graph.driver.close()  # Critical cleanup
+
         # Return both the result and the logs
         return {
             "result": result,
