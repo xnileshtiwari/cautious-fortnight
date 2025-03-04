@@ -101,7 +101,7 @@ class VerboseHandler(BaseCallbackHandler):
 
 def generate(user_input):
     try:
-        graph = Neo4jGraph(url=NEO4J_URI, username=NEO4J_USERNAME, password=NEO4J_PASSWORD, database=NEO4J_DATABASE, timeout=20)
+        graph = Neo4jGraph(url=NEO4J_URI, username=NEO4J_USERNAME, password=4J_PASSWORD, database=NEO4J_DATABASE, timeout=20)
 
         # Create our callback handler
         handler = VerboseHandler()
