@@ -144,14 +144,6 @@ def generate(user_input):
             "result": result,
             "logs": handler.logs
         }
-    except Exception as e:
-        # Log the error and return a user-friendly message
-        error_message = f"Error connecting to database: {str(e)}"
-        print(error_message)  # Print to Streamlit logs
-        return {
-            "result": "I'm having trouble connecting to the database. This may be due to network restrictions in Streamlit Community Cloud. Please check the application logs for more details.",
-            "logs": [{"type": "error", "message": error_message}]
-        }
 
 # Helper function to get the verbose logs for st.status
 def get_verbose_logs():
