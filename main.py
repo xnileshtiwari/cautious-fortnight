@@ -10,10 +10,6 @@ import streamlit as st
 
 
 
-graph = Neo4jGraph(
-    trust="TRUST_ALL_CERTIFICATES"  # For cloud deployments
-)
-
 # Load environment variables - try both methods to support local and cloud deployment
 dotenv.load_dotenv()
 
@@ -24,7 +20,7 @@ try:
     GOOGLE_API_KEY = st.secrets["GEMINI_API_KEY"] 
     NEO4J_URI = st.secrets["NEO4J_URI"]
     NEO4J_USERNAME = st.secrets["NEO4J_USERNAME"] 
-    NEO4J_PASSWORD = st.secrets["NEO4J_PASSWORD"]
+    4J_PASSWORD = st.secrets["4J_PASSWORD"]
     NEO4J_DATABASE = st.secrets["NEO4J_DATABASE"]
     print("Using Streamlit secrets for configuration")
 except (KeyError, AttributeError):
@@ -105,7 +101,7 @@ class VerboseHandler(BaseCallbackHandler):
 
 def generate(user_input):
     try:
-        graph = Neo4jGraph(url=NEO4J_URI, username=NEO4J_USERNAME, password=NEO4J_PASSWORD, database=NEO4J_DATABASE)
+        graph = Neo4jGraph(url=NEO4J_URI, username=NEO4J_USERNAME, password=NEO4J_PASSWORD, database=NEO4J_DATABASE, timeout=20)
 
         # Create our callback handler
         handler = VerboseHandler()
