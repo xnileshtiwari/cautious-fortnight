@@ -1,64 +1,171 @@
 import streamlit as st
-import dotenv
-import os
-from langchain.chains import GraphCypherQAChain
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_community.graphs import Neo4jGraph
+import time
+import random
+from main import generate
 
-# Load environment variables from a .env file
-dotenv.load_dotenv()
+# Page configuration
+st.set_page_config(
+    page_title="AI Chat Assistant",
+    page_icon="💬",
+    layout="centered"
+)
 
-# Retrieve configuration variables from the environment
-GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
-NEO4J_URI = os.getenv("NEO4J_URI")
-NEO4J_USERNAME = "neo4j"
-NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
-NEO4J_DATABASE = "neo4j"
+# Hide Streamlit default elements
+hide_streamlit_style = """
+<style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    .stDeployButton {display: none;}
+    [data-testid="stToolbar"] {visibility: hidden !important;}
+    [data-testid="stDecoration"] {visibility: hidden !important;}
+    .viewerBadge_link__1S137 {display: none !important;}
+    .viewerBadge_container__1QSob {display: none !important;}
+    .stAttribution {display: none !important;}
+</style>
+"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-def generate(user_input):
-    # Create the Neo4jGraph instance without passing the unsupported parameters.
-    graph = Neo4jGraph(
-        url=NEO4J_URI, 
-        username=NEO4J_USERNAME, 
-        password=NEO4J_PASSWORD, 
-        database=NEO4J_DATABASE,
-        refresh_schema=True  # Uses the default behavior; you can also pass a schema if available.
-    )
+st.title("Social Media Analytics Assistant📈")
+
+
+# Custom styling
+st.markdown("""
+<style>
+    .user-avatar {
+        background-color: #4b8bf4;
+        color: white;
+        padding: 0.5rem;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+        font-weight: bold;
+    }
+    .assistant-avatar {
+        background-color: #ff6b6b;
+        color: white;
+        padding: 0.5rem;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+        font-weight: bold;
+    }
+    .chat-message {
+        margin-bottom: 1rem;
+    }
+    /* Custom styling for sample prompt buttons */
+    div[data-testid="stButton"] > button {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        color: #495057;
+        font-size: 0.9rem;
+        padding: 0.5rem;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+    div[data-testid="stButton"] > button:hover {
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+    }
+    .sample-prompts-container {
+        margin-bottom: 1.5rem;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+
+
+
+
+
+# Initialize chat history
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# Predefined prompts
+predefined_prompts = [
+    "🔍 Which is the most liked post?",
+    "💡 Which post has the most comments?",
+    "🔥 Which post has the most shares?",
+    "📜 Where the post 7176541902119280640 is uploaded?"
+]
+
+# Create a container for sample prompts with consistent styling
+st.markdown('<div class="sample-prompts-container"></div>', unsafe_allow_html=True)
+
+
+
+
+st.subheader("Sample Prompts", divider="gray")
+
+# Create a 2x2 grid for the sample prompts
+col1, col2,  = st.columns(2)
+with col1:
+    if st.button(predefined_prompts[0]):
+        st.session_state.temp_input = predefined_prompts[0]
     
-    # Initialize the Google Generative AI model
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.0-flash",
-        temperature=0,
-        max_tokens=None,
-        timeout=None,
-        api_key=GOOGLE_API_KEY,
-    )
+    if st.button(predefined_prompts[2]):
+        st.session_state.temp_input = predefined_prompts[2]
+
+with col2:
+    if st.button(predefined_prompts[1]):
+        st.session_state.temp_input = predefined_prompts[1]
     
-    # Create the chain to convert natural-language questions into Cypher queries
-    chain = GraphCypherQAChain.from_llm(
-        graph=graph,
-        llm=llm,
-        allow_dangerous_requests=True,
-        verbose=True
-    )
-    
-    response = chain(user_input)
-    return response.get("result") or response.get("answer") or response
+    if st.button(predefined_prompts[3]):
+        st.session_state.temp_input = predefined_prompts[3]
 
-def main():
-    st.title("Neo4j Graph Query with Google Generative AI")
-    st.write("Enter your query to interact with your Neo4j graph database.")
+# Display chat messages
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-    user_input = st.text_area("Enter your query:")
+# User input
+user_input = st.chat_input("✨ Ask me anything...")
 
-    if st.button("Submit") and user_input:
-        st.write("Processing your query...")
-        try:
-            result = generate(user_input)
-            st.markdown("### Query Result:")
-            st.write(result)
-        except Exception as e:
-            st.error(f"An error occurred: {e}")
+# Use predefined prompt if selected, otherwise use user input
+if 'temp_input' in st.session_state and st.session_state.temp_input:
+    user_input = st.session_state.temp_input
+    st.session_state.temp_input = None  # Clear the temporary input
 
-if __name__ == "__main__":
-    main()
+# main.py
+
+
+    if user_input:
+        st.session_state.messages.append({"role": "user", "content": user_input})
+
+        with st.chat_message("user"):
+            st.markdown(user_input)
+
+        assistant_message_placeholder = st.empty()  # Use st.empty() as a placeholder
+        full_response = ""
+
+            # Add status element to display verbose output
+        with st.status("Processing with LangChain...", expanded=True) as status:
+            status.update(label="Running LangChain pipeline with real-time logs", state="running")
+            
+            # Get response from main.py
+            response_data = generate(user_input)
+            
+            full_response = response_data
+            
+            # Update the assistant message placeholder
+            assistant_message_placeholder.markdown(full_response)
+            
+            # Complete the status
+            status.update(label="✅ Processing complete! See response below", state="complete")
+
+        assistant_message_placeholder.empty() # Clear the placeholder
+        with st.chat_message("assistant"):  # Now create the final chat message
+            st.markdown(full_response)
+
+        st.session_state.messages.append({"role": "assistant", "content": full_response})
+
+        st.rerun()  # Refresh UI after response
+
+
+# Rerun the app to update the chat immediately
+if user_input:
+    st.rerun()
